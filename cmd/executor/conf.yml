@@ -1,0 +1,21 @@
+webserver:
+  port: 8092
+mysql:
+  ### 必填
+  dsn: root:asd1314lxc@tcp(192.168.6.155:3306)/xtimer?parseTime=true&loc=Asia%2FShanghai
+  # maxOpenConns: 100
+  # maxIdleConns: 50
+# pool:
+#   size: 500000
+#   expireSeconds: 30
+#   nonBlocking: false
+
+redis:
+  # network: tcp 
+  ## 必填
+  address: 192.168.6.155:6379
+  password: 
+  # maxIdle: 2000
+  # idleTimeout: 10
+  # maxActive: 5000
+  # wait: true

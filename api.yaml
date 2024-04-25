@@ -1,0 +1,18 @@
+curl http://127.0.0.1:8092/api/timer/v1/defs?app=upgrade #查询定时任务配置
+
+curl -X POST -H "Content-Type: application/json" -d '{
+  "app": "upgrade",
+  "name": "lieoxc",
+  "status": 1,
+  "cron": "* * * * *",
+  "notifyHTTPParam": {
+    "method": "GET",
+    "url": "www.baidu.com"
+  }
+}'  http://127.0.0.1:8092/api/timer/v1/def    #创建定时任务
+
+
+curl -X POST -H "Content-Type: application/json" -d '{
+  "app": "upgrade",
+  "id": 3
+}'  http://127.0.0.1:8092/api/timer/v1/enable    #创建定时任务
