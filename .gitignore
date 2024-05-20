@@ -1,1 +1,4 @@
 *.log
+cmd/executor
+cmd/scheduler
+cmd/trigger

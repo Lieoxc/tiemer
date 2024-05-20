@@ -10,14 +10,14 @@ import (
 
 func main() {
 	migratorApp := app.GetMigratorApp()
-	//schedulerApp := app.GetSchedulerApp()
-	//webServer := app.GetWebServer()
+	schedulerApp := app.GetSchedulerApp()
+	webServer := app.GetWebServer()
 
-	migratorApp.Start() // 开启定时任务打点器
-	//schedulerApp.Start() // 开启定时任务调度器
-	//defer schedulerApp.Stop()
+	migratorApp.Start()  // 开启定时任务打点器
+	schedulerApp.Start() // 开启定时任务调度器
+	defer schedulerApp.Stop()
 
-	//webServer.Start() // 开启HTTP监听
+	webServer.Start() // 开启HTTP监听
 
 	// 支持 pprof
 	go func() {
