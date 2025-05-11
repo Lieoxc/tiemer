@@ -33,12 +33,13 @@ func NewTimerService(timerDAO *timerdao.TimerDAO, taskDAO *taskdao.TaskDAO, conf
 	}
 }
 
+// 定时1min  扫描task 表，获取当前时刻到2min 后 这段时间内的任务 。然后添加到 全局对象 map[uint]*vo.Timer
 func (t *TimerService) Start(ctx context.Context) {
 	t.Do(func() {
 		go func() {
 			t.ctx, t.stop = context.WithCancel(ctx)
 
-			stepMinutes := t.confProvider.Get().TimerDetailCacheMinutes
+			stepMinutes := t.confProvider.Get().TimerDetailCacheMinutes // TimerDetailCacheMinutes 默认2min
 			ticker := time.NewTicker(time.Duration(stepMinutes) * time.Minute)
 			defer ticker.Stop()
 

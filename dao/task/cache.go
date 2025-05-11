@@ -44,7 +44,7 @@ func (t *TaskCache) BatchCreateTasks(ctx context.Context, tasks []*po.Task, star
 	for _, task := range tasks {
 		unix := task.RunTimer.UnixMilli()
 		tableName := t.GetTableName(task)
-		// tableName := t.GetTableName(task, minBuckets)
+		// ZADD 2006-01-02 15:04_int64(task.TimerID)%int64(maxBucket) unix timeID:unix
 		commands = append(commands, redis.NewZAddCommand(tableName, unix, utils.UnionTimerIDUnix(task.TimerID, unix)))
 		// zset 一天后过期
 		aliveSeconds := int64(time.Until(task.RunTimer.Add(24*time.Hour)) / time.Second)

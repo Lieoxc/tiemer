@@ -43,6 +43,9 @@ func NewWorker(task *TaskService, lockService *redis.Client, confProvider *conf.
 	}
 	return defaultWorker
 }
+
+// 这个函数每次运行会持续 1min， 间隔1s 进行检查，看看有没有符合条件的定时任务；
+// 如果存在需要执行的定时任务，发送消息到消息队列
 func schedulerHandler(ctx context.Context, task *asynq.Task) error {
 	var dataSt msg.SchedulerDataSt
 	if err := json.Unmarshal(task.Payload(), &dataSt); err != nil {
@@ -56,11 +59,12 @@ func schedulerHandler(ctx context.Context, task *asynq.Task) error {
 	}
 
 	conf := defaultWorker.confProvider.Get()
+	// 定时1s 检查任务是否时间达标
 	ticker := time.NewTicker(time.Duration(conf.ZRangeGapSeconds) * time.Second)
 	defer ticker.Stop()
 
 	endTime := startTime.Add(time.Minute)
-
+	// channel 缓冲大小61
 	notifier := concurrency.NewSafeChan(int(time.Minute/(time.Duration(conf.ZRangeGapSeconds)*time.Second)) + 1)
 	defer notifier.Close()
 
@@ -72,7 +76,7 @@ func schedulerHandler(ctx context.Context, task *asynq.Task) error {
 			notifier.Put(err)
 		}
 	}()
-
+	// 定时1s， 检查这一分钟内的任务那些
 	for range ticker.C {
 		select {
 		case e := <-notifier.GetChan():
@@ -80,6 +84,7 @@ func schedulerHandler(ctx context.Context, task *asynq.Task) error {
 			return err
 		default:
 		}
+		// 保证1min 后退出， 即startTime 一直增加，直到大于endTime 后退出， 表示成功消费完这个消息 （每条消息表示 这一分钟，对应的bucketID 上面的定时任务）
 		if startTime = startTime.Add(time.Duration(conf.ZRangeGapSeconds) * time.Second); startTime.Equal(endTime) || startTime.After(endTime) {
 			break
 		}
@@ -87,6 +92,8 @@ func schedulerHandler(ctx context.Context, task *asynq.Task) error {
 		wg.Add(1)
 		go func(startTime time.Time) {
 			defer wg.Done()
+			// 检查 2006-01-02 15:04_bucketID 这个key 上面的 集合是否有满足
+			// startTime - startTime.Add(time.Duration(conf.ZRangeGapSeconds)*time.Second)  区间的定时任务
 			if err := defaultWorker.handleBatch(ctx, dataSt.TimeBucketLockKey, startTime, startTime.Add(time.Duration(conf.ZRangeGapSeconds)*time.Second)); err != nil {
 				notifier.Put(err)
 			}
@@ -119,7 +126,8 @@ func (w *Worker) handleBatch(ctx context.Context, key string, start, end time.Ti
 	if err != nil {
 		return err
 	}
-
+	// 1. 通过zrang  2006-01-02 15:04_bucketID  start end  这个范围是否有定时任务
+	// 2. redis不存在，那么查询数据库 task 表
 	tasks, err := w.task.GetTasksByTime(ctx, key, bucket, start, end)
 	if err != nil {
 		return err
@@ -129,7 +137,7 @@ func (w *Worker) handleBatch(ctx context.Context, key string, start, end time.Ti
 	for _, task := range tasks {
 		timerIDs = append(timerIDs, task.TimerID)
 	}
-	// 使用消息队列通知 executor
+	// 1. 得到满足 当前时间段内需要执行的定时任务， 那么发送消息，通知 执行器执行任务
 	for _, task := range tasks {
 		task := task
 		dataSt := msg.TiggerDataSt{

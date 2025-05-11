@@ -14,5 +14,5 @@ curl -X POST -H "Content-Type: application/json" -d '{
 
 curl -X POST -H "Content-Type: application/json" -d '{
   "app": "upgrade",
-  "id": 3
+  "id": 
 }'  http://127.0.0.1:8092/api/timer/v1/enable    #创建定时任务

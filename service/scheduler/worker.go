@@ -35,12 +35,14 @@ func NewWorker(redisClient *redis.Client, appConfProvider *conf.SchedulerAppConf
 	}
 }
 
+// 每秒触发一次，第一次触发后，对应的协程 会加一个分布式锁，锁住。 表示这个协程自己处理 这 2006-01-02 15:04_bucket 这个key 上面的定时任务
+// 后面其他时刻的协程都会因为争取不到分布式锁，直接退出。 所以1min 内，其实只有bucket个协程实际处理过任务
 func (w *Worker) Start(ctx context.Context) error {
 
 	ticker := time.NewTicker(time.Duration(w.appConfProvider.Get().TryLockGapMilliSeconds) * time.Millisecond)
 	defer ticker.Stop()
 	log.InfoContext(ctx, "worker app is Duration: ", w.appConfProvider.Get().TryLockGapMilliSeconds)
-	for range ticker.C {
+	for range ticker.C { // 每 1000 ms 触发一次
 		select {
 		case <-ctx.Done():
 			log.WarnContext(ctx, "stopped")
@@ -86,6 +88,7 @@ func (w *Worker) handleSlice(ctx context.Context, bucketID int) {
 
 func (w *Worker) asyncHandleSlice(ctx context.Context, t time.Time, bucketID int) {
 	locker := w.lockService.GetDistributionLock(utils.GetTimeBucketLockKey(t, bucketID))
+	// 给这个分布式key 上锁 TryLockSeconds 默认70s
 	if err := locker.Lock(ctx, int64(w.appConfProvider.Get().TryLockSeconds)); err != nil {
 		// log.WarnContextf(ctx, "get lock failed, err: %v, key: %s", err, utils.GetTimeBucketLockKey(t, bucketID))
 		return

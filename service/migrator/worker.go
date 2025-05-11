@@ -90,8 +90,7 @@ func (w *Worker) migrate(ctx context.Context) error {
 
 	// log.InfoContext(ctx, "migrator batch create db tasks susccess")
 
-	//return w.migrateToCache(ctx, start, end)
-	return nil
+	return w.migrateToCache(ctx, start, end)
 }
 
 // func (w *Worker) batchCreateBucket(ctx context.Context, start, end time.Time) error {
